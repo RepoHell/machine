@@ -11,8 +11,9 @@ func init() {
 }
 
 func NewAmazonLinuxProvisioner(d drivers.Driver) Provisioner {
-	return &UbuntuProvisioner{
-		GenericProvisioner{
+	return &AmazonLinuxProvisioner{
+		&UbuntuProvisioner{
+			GenericProvisioner{
 			SSHCommander:      GenericSSHCommander{Driver: d},
 			DockerOptionsDir:  "/etc/docker",
 			DaemonOptionsFile: "/etc/default/docker",
@@ -21,7 +22,7 @@ func NewAmazonLinuxProvisioner(d drivers.Driver) Provisioner {
 				"curl",
 			},
 			Driver: d,
-		},
+		}},
 	}
 }
 
