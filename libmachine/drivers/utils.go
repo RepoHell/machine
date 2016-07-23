@@ -2,7 +2,7 @@ package drivers
 
 import (
 	"fmt"
-
+	"runtime"
 	"github.com/docker/machine/libmachine/log"
 	"github.com/docker/machine/libmachine/mcnutils"
 	"github.com/docker/machine/libmachine/ssh"
@@ -39,7 +39,12 @@ func RunSSHCommandFromDriver(d Driver, command string) (string, error) {
 		return "", err
 	}
 
-	log.Debugf("About to run SSH command:\n%s", command)
+	log.Debugf("About to run SSH command from driver:\n%s", command)
+	func() {
+		buf := make([]byte, 1<<16)
+		count := runtime.Stack(buf, false)
+		log.Debugf("Stack: %s", buf[0:count])
+	}()
 
 	output, err := client.Output(command)
 	log.Debugf("SSH cmd err, output: %v: %s", err, output)
