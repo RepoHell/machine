@@ -10,4 +10,5 @@ type EngineConfigContext struct {
 	AuthOptions      auth.Options
 	EngineOptions    engine.Options
 	DockerOptionsDir string
+	DockerOptionsVarName string
 }
