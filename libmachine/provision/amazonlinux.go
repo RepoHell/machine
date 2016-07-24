@@ -1,6 +1,7 @@
 package provision
 
 import (
+	"fmt"
 	"github.com/docker/machine/libmachine/auth"
 	"github.com/docker/machine/libmachine/drivers"
 	"github.com/docker/machine/libmachine/engine"
@@ -9,7 +10,6 @@ import (
 	"github.com/docker/machine/libmachine/provision/pkgaction"
 	"github.com/docker/machine/libmachine/provision/serviceaction"
 	"github.com/docker/machine/libmachine/swarm"
-	"fmt"
 )
 
 func init() {
@@ -19,13 +19,13 @@ func init() {
 }
 
 func NewAmazonLinuxProvisioner(d drivers.Driver) Provisioner {
-	return	&AmazonLinuxProvisioner{
-			GenericProvisioner{
-			SSHCommander:      GenericSSHCommander{Driver: d},
-			DockerOptionsDir:  "/etc/sysconfig",
-			DaemonOptionsFile: "/etc/sysconfig/docker",
-				DockerOptionsVarName: "OPTIONS",
-			OsReleaseID:       "amzn",
+	return &AmazonLinuxProvisioner{
+		GenericProvisioner{
+			SSHCommander:         GenericSSHCommander{Driver: d},
+			DockerOptionsDir:     "/etc/sysconfig",
+			DaemonOptionsFile:    "/etc/sysconfig/docker",
+			DockerOptionsVarName: "OPTIONS",
+			OsReleaseID:          "amzn",
 			Packages: []string{
 				"curl",
 			},
@@ -90,7 +90,6 @@ func (provisioner *AmazonLinuxProvisioner) installDocker() error {
 	}
 	return nil
 }
-
 
 func (provisioner *AmazonLinuxProvisioner) dockerDaemonResponding() bool {
 	log.Debug("checking docker daemon")

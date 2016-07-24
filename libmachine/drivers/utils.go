@@ -2,6 +2,7 @@ package drivers
 
 import (
 	"fmt"
+
 	"github.com/docker/machine/libmachine/log"
 	"github.com/docker/machine/libmachine/mcnutils"
 	"github.com/docker/machine/libmachine/ssh"
