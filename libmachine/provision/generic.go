@@ -14,6 +14,7 @@ import (
 type GenericProvisioner struct {
 	SSHCommander
 	OsReleaseID       string
+	DockerOptionsVarName string
 	DockerOptionsDir  string
 	DaemonOptionsFile string
 	Packages          []string
@@ -96,8 +97,11 @@ func (provisioner *GenericProvisioner) GenerateDockerOptions(dockerPort int) (*D
 	driverNameLabel := fmt.Sprintf("provider=%s", provisioner.Driver.DriverName())
 	provisioner.EngineOptions.Labels = append(provisioner.EngineOptions.Labels, driverNameLabel)
 
+	if provisioner.DockerOptionsVarName == "" {
+		provisioner.DockerOptionsVarName = "DOCKER_OPTS"
+	}
 	engineConfigTmpl := `
-DOCKER_OPTS='
+{{.DockerOptionsVarName}}='
 -H tcp://0.0.0.0:{{.DockerPort}}
 -H unix:///var/run/docker.sock
 --storage-driver {{.EngineOptions.StorageDriver}}
@@ -120,6 +124,7 @@ DOCKER_OPTS='
 	}
 
 	engineConfigContext := EngineConfigContext{
+		DockerOptionsVarName: provisioner.DockerOptionsVarName,
 		DockerPort:    dockerPort,
 		AuthOptions:   provisioner.AuthOptions,
 		EngineOptions: provisioner.EngineOptions,
