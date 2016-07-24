@@ -110,7 +110,7 @@ func (provisioner *AmazonLinuxProvisioner) Provision(swarmOptions swarm.Options,
 	provisioner.EngineOptions = engineOptions
 	swarmOptions.Env = engineOptions.Env
 
-	// set default storage driver for redhat
+	// set default storage driver for Amazon Linux
 	storageDriver, err := decideStorageDriver(provisioner, "overlay", engineOptions.StorageDriver)
 	if err != nil {
 		return err

@@ -114,11 +114,9 @@ func (detector StandardDetector) DetectProvisioner(d drivers.Driver) (Provisione
 		return nil, fmt.Errorf("Error parsing /etc/os-release file: %s", err)
 	}
 
-	log.Debugf("Will probe osReleaseInfo: %+v",osReleaseInfo)
 	for _, p := range provisioners {
 		provisioner := p.New(d)
 		provisioner.SetOsReleaseInfo(osReleaseInfo)
-		log.Debugf("Probing with provisioner: %+v",provisioner)
 
 		if provisioner.CompatibleWithHost() {
 			log.Debugf("found compatible host: %s", osReleaseInfo.ID)
