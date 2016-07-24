@@ -85,15 +85,9 @@ func (provisioner *AmazonLinuxProvisioner) installDocker() error {
 	if err := installDockerGeneric(provisioner, provisioner.EngineOptions.InstallURL); err != nil {
 		return err
 	}
-
 	if err := provisioner.Service("docker", serviceaction.Restart); err != nil {
 		return err
 	}
-
-	//if err := provisioner.Service("docker", serviceaction.Enable); err != nil {
-	//	return err
-	//}
-
 	return nil
 }
 

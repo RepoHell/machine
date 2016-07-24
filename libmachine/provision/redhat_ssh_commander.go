@@ -2,7 +2,6 @@ package provision
 
 import (
 	"fmt"
-        "runtime"
 	"github.com/docker/machine/libmachine/drivers"
 	"github.com/docker/machine/libmachine/log"
 	"github.com/docker/machine/libmachine/ssh"
@@ -18,12 +17,7 @@ func (sshCmder RedHatSSHCommander) SSHCommand(args string) (string, error) {
 		return "", err
 	}
 
-	log.Debugf("About to run SSH command from RedHatSSHCommander:\n%s", args)
-	func() {
-		buf := make([]byte, 1<<16)
-		count := runtime.Stack(buf, false)
-		log.Debugf("Stack: %s", buf[0:count])
-	}()
+	log.Debugf("About to run SSH command:\n%s", args)
 
 	// redhat needs "-t" for tty allocation on ssh therefore we check for the
 	// external client and add as needed.
