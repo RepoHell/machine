@@ -10,6 +10,7 @@ import (
 	"github.com/docker/machine/libmachine/provision/pkgaction"
 	"github.com/docker/machine/libmachine/provision/serviceaction"
 	"github.com/docker/machine/libmachine/swarm"
+	"strings"
 )
 
 func init() {
@@ -82,13 +83,50 @@ func (provisioner *AmazonLinuxProvisioner) Package(name string, action pkgaction
 }
 
 func (provisioner *AmazonLinuxProvisioner) installDocker() error {
+	// This just to install certs to be used by Docker 1.12 - won't start the service
 	if err := installDockerGeneric(provisioner, provisioner.EngineOptions.InstallURL); err != nil {
 		return err
 	}
+	// "Manual" docker install of v1.12
+	if !provisioner.installDockerToLocalAndStart() {
+		log.Error("installDockerToLocalAndStart failed")
+		return fmt.Errorf("installDockerToLocalAndStart failed")
+	}
+	return nil
 	if err := provisioner.Service("docker", serviceaction.Restart); err != nil {
 		return err
 	}
 	return nil
+}
+
+func (provisioner *AmazonLinuxProvisioner) installDockerToLocalAndStart() bool {
+	cmd := "wget -O /tmp/docker-1.12.0.tgz  https://get.docker.com/builds/Linux/x86_64/docker-1.12.0.tgz"
+	if out, err := provisioner.SSHCommand(cmd); err != nil {
+		log.Warnf("Error downloading docker binaries: %s", err)
+		log.Debugf("'%s' output:\n%s",cmd, out)
+		return false
+	}
+	cmd = "tar -C /tmp -xvzf /tmp/docker-1.12.0.tgz"
+	if out, err := provisioner.SSHCommand(cmd); err != nil {
+		log.Warnf("Error unpacking docker binaries: %s", err)
+		log.Debugf("'%s' output:\n%s",cmd, out)
+		return false
+	}
+	cmd = "sudo cp /tmp/docker/* /usr/local/bin"
+	if out, err := provisioner.SSHCommand(cmd); err != nil {
+		log.Warnf("Error copying docker binaries to /usr/local/bin: %s", err)
+		log.Debugf("'%s' output:\n%s",cmd, out)
+		return false
+	}
+	cmd = "sudo PATH=/usr/local/bin:$PATH nohup /usr/local/bin/docker daemon -H tcp://0.0.0.0:2376 -H unix:///var/run/docker.sock --storage-driver overlay --tlsverify --tlscacert /etc/sysconfig/ca.pem --tlscert /etc/sysconfig/server.pem --tlskey /etc/sysconfig/server-key.pem --label provider=amazonec2"
+	//" --cluster-store=consul://10.0.0.181:8500 --cluster-advertise=eth0:2376"
+	cmd = cmd + " " + strings.Join(provisioner.EngineOptions.ArbitraryFlags," ")
+	if out, err := provisioner.SSHCommand(cmd); err != nil {
+		log.Warnf("Error starting docker : %s", err)
+		log.Debugf("'%s' output:\n%s",cmd, out)
+		return false
+	}
+	return true
 }
 
 func (provisioner *AmazonLinuxProvisioner) dockerDaemonResponding() bool {
