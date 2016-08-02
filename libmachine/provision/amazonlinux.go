@@ -83,18 +83,16 @@ func (provisioner *AmazonLinuxProvisioner) Package(name string, action pkgaction
 }
 
 func (provisioner *AmazonLinuxProvisioner) installDocker() error {
-	// This just to install certs to be used by Docker 1.12 - won't start the service
 	if err := installDockerGeneric(provisioner, provisioner.EngineOptions.InstallURL); err != nil {
+		return err
+	}
+	if err := provisioner.Service("docker", serviceaction.Stop); err != nil {
 		return err
 	}
 	// "Manual" docker install of v1.12
 	if !provisioner.installDockerToLocalAndStart() {
 		log.Error("installDockerToLocalAndStart failed")
 		return fmt.Errorf("installDockerToLocalAndStart failed")
-	}
-	return nil
-	if err := provisioner.Service("docker", serviceaction.Restart); err != nil {
-		return err
 	}
 	return nil
 }
@@ -115,14 +113,6 @@ func (provisioner *AmazonLinuxProvisioner) installDockerToLocalAndStart() bool {
 	cmd = "sudo cp /tmp/docker/* /usr/local/bin"
 	if out, err := provisioner.SSHCommand(cmd); err != nil {
 		log.Warnf("Error copying docker binaries to /usr/local/bin: %s", err)
-		log.Debugf("'%s' output:\n%s",cmd, out)
-		return false
-	}
-	cmd = "sudo PATH=/usr/local/bin:$PATH nohup /usr/local/bin/docker daemon -H tcp://0.0.0.0:2376 -H unix:///var/run/docker.sock --storage-driver overlay --tlsverify --tlscacert /etc/sysconfig/ca.pem --tlscert /etc/sysconfig/server.pem --tlskey /etc/sysconfig/server-key.pem --label provider=amazonec2"
-	//" --cluster-store=consul://10.0.0.181:8500 --cluster-advertise=eth0:2376"
-	cmd = cmd + " " + strings.Join(provisioner.EngineOptions.ArbitraryFlags," ")
-	if out, err := provisioner.SSHCommand(cmd); err != nil {
-		log.Warnf("Error starting docker : %s", err)
 		log.Debugf("'%s' output:\n%s",cmd, out)
 		return false
 	}
@@ -176,9 +166,6 @@ func (provisioner *AmazonLinuxProvisioner) Provision(swarmOptions swarm.Options,
 		return err
 	}
 
-	if err := mcnutils.WaitFor(provisioner.dockerDaemonResponding); err != nil {
-		return err
-	}
 
 	if err := makeDockerOptionsDir(provisioner); err != nil {
 		return err
@@ -187,6 +174,22 @@ func (provisioner *AmazonLinuxProvisioner) Provision(swarmOptions swarm.Options,
 	provisioner.AuthOptions = setRemoteAuthOptions(provisioner)
 
 	if err := ConfigureAuth(provisioner); err != nil {
+		return err
+	}
+
+	provisioner.SSHCommand("sudo killall docker")
+	provisioner.SSHCommand("sudo rm -f /var/run/docker.pid")
+
+	cmd := "sudo PATH=/usr/local/bin:/sbin:/bin:/usr/sbin:/usr/bin nohup /usr/local/bin/docker daemon -H tcp://0.0.0.0:2376 -H unix:///var/run/docker.sock --storage-driver overlay --tlsverify --tlscacert /etc/sysconfig/ca.pem --tlscert /etc/sysconfig/server.pem --tlskey /etc/sysconfig/server-key.pem --label provider=amazonec2"
+	//" --cluster-store=consul://10.0.0.181:8500 --cluster-advertise=eth0:2376"
+	cmd = cmd + " " + strings.Join(provisioner.EngineOptions.ArbitraryFlags," ")
+	if out, err := provisioner.SSHCommand(cmd); err != nil {
+		log.Warnf("Error starting docker : %s", err)
+		log.Debugf("'%s' output:\n%s",cmd, out)
+		return err
+	}
+
+	if err := mcnutils.WaitFor(provisioner.dockerDaemonResponding); err != nil {
 		return err
 	}
 
