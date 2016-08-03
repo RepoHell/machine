@@ -10,7 +10,6 @@ import (
 	"github.com/docker/machine/libmachine/provision/pkgaction"
 	"github.com/docker/machine/libmachine/provision/serviceaction"
 	"github.com/docker/machine/libmachine/swarm"
-	"strings"
 )
 
 func init() {
@@ -86,13 +85,13 @@ func (provisioner *AmazonLinuxProvisioner) installDocker() error {
 	if err := installDockerGeneric(provisioner, provisioner.EngineOptions.InstallURL); err != nil {
 		return err
 	}
-	if err := provisioner.Service("docker", serviceaction.Stop); err != nil {
-		return err
-	}
 	// "Manual" docker install of v1.12
 	if !provisioner.installDockerToLocalAndStart() {
 		log.Error("installDockerToLocalAndStart failed")
 		return fmt.Errorf("installDockerToLocalAndStart failed")
+	}
+	if err := provisioner.Service("docker", serviceaction.Restart); err != nil {
+		return err
 	}
 	return nil
 }
@@ -110,7 +109,7 @@ func (provisioner *AmazonLinuxProvisioner) installDockerToLocalAndStart() bool {
 		log.Debugf("'%s' output:\n%s",cmd, out)
 		return false
 	}
-	cmd = "sudo cp /tmp/docker/* /usr/local/bin"
+	cmd = "sudo cp /tmp/docker/* /usr/bin"
 	if out, err := provisioner.SSHCommand(cmd); err != nil {
 		log.Warnf("Error copying docker binaries to /usr/local/bin: %s", err)
 		log.Debugf("'%s' output:\n%s",cmd, out)
@@ -177,17 +176,17 @@ func (provisioner *AmazonLinuxProvisioner) Provision(swarmOptions swarm.Options,
 		return err
 	}
 
-	provisioner.SSHCommand("sudo killall docker")
-	provisioner.SSHCommand("sudo rm -f /var/run/docker.pid")
-
-	cmd := "sudo PATH=/usr/local/bin:/sbin:/bin:/usr/sbin:/usr/bin nohup /usr/local/bin/docker daemon -H tcp://0.0.0.0:2376 -H unix:///var/run/docker.sock --storage-driver overlay --tlsverify --tlscacert /etc/sysconfig/ca.pem --tlscert /etc/sysconfig/server.pem --tlskey /etc/sysconfig/server-key.pem --label provider=amazonec2"
-	//" --cluster-store=consul://10.0.0.181:8500 --cluster-advertise=eth0:2376"
-	cmd = cmd + " " + strings.Join(provisioner.EngineOptions.ArbitraryFlags," ")
-	if out, err := provisioner.SSHCommand(cmd); err != nil {
-		log.Warnf("Error starting docker : %s", err)
-		log.Debugf("'%s' output:\n%s",cmd, out)
-		return err
-	}
+	//provisioner.SSHCommand("sudo killall docker")
+	//provisioner.SSHCommand("sudo rm -f /var/run/docker.pid")
+	//
+	//cmd := "sudo PATH=/usr/local/bin:/sbin:/bin:/usr/sbin:/usr/bin nohup /usr/local/bin/docker daemon -H tcp://0.0.0.0:2376 -H unix:///var/run/docker.sock --storage-driver overlay --tlsverify --tlscacert /etc/sysconfig/ca.pem --tlscert /etc/sysconfig/server.pem --tlskey /etc/sysconfig/server-key.pem --label provider=amazonec2"
+	////" --cluster-store=consul://10.0.0.181:8500 --cluster-advertise=eth0:2376"
+	//cmd = cmd + " " + strings.Join(provisioner.EngineOptions.ArbitraryFlags," ")
+	//if out, err := provisioner.SSHCommand(cmd); err != nil {
+	//	log.Warnf("Error starting docker : %s", err)
+	//	log.Debugf("'%s' output:\n%s",cmd, out)
+	//	return err
+	//}
 
 	if err := mcnutils.WaitFor(provisioner.dockerDaemonResponding); err != nil {
 		return err
